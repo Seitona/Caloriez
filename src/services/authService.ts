@@ -11,7 +11,7 @@ import { auth, isFirebaseConfigured } from './firebase';
 import { UserService } from './userService';
 import { UserProfile } from '../types/user';
 
-const AUTH_CACHE_KEY = '@nutritrack_auth_user';
+const AUTH_CACHE_KEY = '@caloriez_auth_user';
 
 export class AuthService {
   /**
@@ -186,6 +186,8 @@ export class AuthService {
       console.warn('Firebase signOut error:', err);
     }
     await AsyncStorage.removeItem(AUTH_CACHE_KEY);
+    await AsyncStorage.removeItem('@caloriez_user_profile');
+    await AsyncStorage.removeItem('@nutritrack_auth_user');
     await AsyncStorage.removeItem('@nutritrack_user_profile');
   }
 

@@ -35,7 +35,7 @@ export interface FirestoreUserProfile {
   updatedAt: any;
 }
 
-const LOCAL_USER_KEY = '@nutritrack_user_profile';
+const LOCAL_USER_KEY = '@caloriez_user_profile';
 
 export class UserService {
   /**

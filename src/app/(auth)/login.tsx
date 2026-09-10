@@ -44,7 +44,7 @@ export default function LoginScreen() {
           <Ionicons name="sparkles" size={38} color={colors.accent} />
         </View>
         <Text style={[Typography.hero, styles.title, { color: colors.textPrimary }]}>
-          NutriTrack <Text style={{ color: colors.accent }}>AI</Text>
+          Caloriez
         </Text>
         <Text style={[Typography.body, styles.subtitle, { color: colors.textSecondary }]}>
           Track meals effortlessly with computer vision and smart calorie analytics.

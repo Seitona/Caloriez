@@ -122,7 +122,7 @@ export default function SettingsScreen() {
         />
         <SettingRow
           icon="information-circle-outline"
-          title="About NutriTrack AI"
+          title="About Caloriez"
           value="v1.0.0"
         />
       </View>

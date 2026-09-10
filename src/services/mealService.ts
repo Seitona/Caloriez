@@ -36,7 +36,7 @@ export interface FirestoreMealDocument {
   updatedAt: any;
 }
 
-const LOCAL_MEALS_KEY = '@nutritrack_meals_cache';
+const LOCAL_MEALS_KEY = '@caloriez_meals_cache';
 
 export class MealService {
   /**

@@ -36,7 +36,7 @@ export default function SplashScreen() {
 
         {/* App Name & Tagline */}
         <Text style={[Typography.hero, styles.title, { color: colors.textPrimary }]}>
-          NutriTrack <Text style={{ color: colors.accent }}>AI</Text>
+          Caloriez
         </Text>
         <Text style={[Typography.body, styles.tagline, { color: colors.textSecondary }]}>
           Intelligent Calorie & Macro Nutrition

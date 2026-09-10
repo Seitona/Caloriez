@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "ai-calorie-tracker",
-    "slug": "ai-calorie-tracker",
+    "name": "Caloriez",
+    "slug": "caloriez",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "aicalorietracker",
+    "scheme": "caloriez",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
