@@ -130,8 +130,8 @@ export class AuthService {
     if (!profile) {
       profile = {
         id: fallbackUid,
-        displayName: 'Google User',
-        email: 'user@example.com',
+        displayName: '',
+        email: '',
         avatarUrl: undefined,
         age: 28,
         sex: 'male',

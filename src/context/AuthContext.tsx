@@ -27,7 +27,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const cached = await AuthService.getCachedSession();
         if (cached && isMounted) {
-          setUser(cached);
+          if (cached.displayName === 'Hadji' || cached.email?.includes('hadji') || cached.id === 'usr_mock_001') {
+            await AuthService.signOut();
+            setUser(null);
+          } else {
+            setUser(cached);
+          }
         }
       } catch (err) {
         console.warn('Session init error:', err);

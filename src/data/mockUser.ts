@@ -1,9 +1,9 @@
 import { UserProfile } from '../types/user';
 
 export const initialMockUser: UserProfile = {
-  id: 'usr_mock_001',
-  displayName: 'Hadji',
-  email: 'hadji.developer@example.com',
+  id: 'usr_new_user',
+  displayName: '',
+  email: '',
   avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
   age: 28,
   sex: 'male',
