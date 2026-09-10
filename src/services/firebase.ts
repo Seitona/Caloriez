@@ -12,6 +12,12 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '1:123456789012:web:demoapp',
 };
 
+export const isFirebaseConfigured = Boolean(
+  process.env.EXPO_PUBLIC_FIREBASE_API_KEY &&
+  process.env.EXPO_PUBLIC_FIREBASE_API_KEY !== 'demo-api-key' &&
+  !process.env.EXPO_PUBLIC_FIREBASE_API_KEY.startsWith('demo-')
+);
+
 // Initialize Firebase App singleton
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 

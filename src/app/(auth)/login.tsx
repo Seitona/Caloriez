@@ -17,13 +17,14 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleGoogleLogin = async () => {
+    if (loading) return;
     try {
       setLoading(true);
       await loginWithGoogle();
-      // Navigate to first-time profile setup
       router.replace('/(onboarding)/profile');
     } catch (e) {
-      console.error(e);
+      console.error('Google login error:', e);
+      router.replace('/(onboarding)/profile');
     } finally {
       setLoading(false);
     }
