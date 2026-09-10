@@ -20,8 +20,12 @@ export default function LoginScreen() {
     if (loading) return;
     try {
       setLoading(true);
-      await loginWithGoogle();
-      router.replace('/(onboarding)/profile');
+      const profile = await loginWithGoogle();
+      if (profile?.isOnboarded) {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/(onboarding)/profile');
+      }
     } catch (e: any) {
       console.error('Google login error:', e);
       if (e?.message && !e.message.includes('cancelled')) {
@@ -94,7 +98,7 @@ export default function LoginScreen() {
         />
 
         <Text style={[Typography.tiny, styles.termsText, { color: colors.textSecondary }]}>
-          By continuing, you agree to our Terms of Service and Privacy Policy. Mock prototype only.
+          By continuing, you agree to our Terms of Service and Privacy Policy.
         </Text>
       </View>
     </ScreenContainer>

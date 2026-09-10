@@ -1,7 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { initialTodayMeals } from '../data/mockMeals';
 import { mockAchievements } from '../data/mockAchievements';
-import { mockDayLogs, mockMonthLog, mockWeekLog, mockYearLog } from '../data/mockHistory';
 import { HistoryService } from '../services/historyService';
 import { MealService } from '../services/mealService';
 import { Achievement, DayLog, MonthLog, WeekLog, YearLog } from '../types/history';
@@ -164,11 +162,101 @@ export function NutritionProvider({ children }: { children: React.ReactNode }) {
     return dayLogs[0];
   }, [dayLogs, selectedDate]);
 
-  // Deterministically compute streaks (Section 47)
+  const getMealDate = (m: Meal): string => {
+    if (m.date) return m.date;
+    if (m.consumedAt) {
+      if (m.consumedAt.includes('T')) return m.consumedAt.split('T')[0];
+      if (m.consumedAt.match(/^\d{4}-\d{2}-\d{2}/)) return m.consumedAt.substring(0, 10);
+    }
+    return getTodayLocalDate();
+  };
+
+  // Deterministically compute streaks from user's actual logged meal dates
   const streakData = useMemo(() => {
-    const dateSet = new Set<string>(['2026-09-07', '2026-09-08', '2026-09-09', '2026-09-10']);
-    return HistoryService.calculateTrackingStreak(dateSet, '2026-09-10');
+    const dateSet = new Set<string>(todayMeals.map((m) => getMealDate(m)));
+    return HistoryService.calculateTrackingStreak(dateSet, getTodayLocalDate());
   }, [todayMeals]);
+
+  const daysTrackedCount = useMemo(() => {
+    return new Set(todayMeals.map((m) => getMealDate(m))).size;
+  }, [todayMeals]);
+
+  // Compute dynamic week log from user's actual meals
+  const weekLog = useMemo(() => {
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + mondayOffset);
+
+    const dayItems = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((dayName, idx) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + idx);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dateStr = `${y}-${m}-${String(d.getDate()).padStart(2, '0')}`;
+      const dayMeals = todayMeals.filter((meal) => getMealDate(meal) === dateStr);
+      return {
+        dayName,
+        date: `${d.toLocaleString('default', { month: 'short' })} ${d.getDate()}`,
+        meals: dayMeals,
+      };
+    });
+
+    return HistoryService.calculateWeekLog(
+      `${dayItems[0].date} - ${dayItems[6].date}`,
+      dayItems,
+      macroGoals
+    );
+  }, [todayMeals, macroGoals]);
+
+  const monthLog = useMemo(() => {
+    const now = new Date();
+    const daysMap: Record<string, Meal[]> = {};
+    todayMeals.forEach((meal) => {
+      const d = getMealDate(meal);
+      if (!daysMap[d]) daysMap[d] = [];
+      daysMap[d].push(meal);
+    });
+    return HistoryService.calculateMonthLog(
+      now.toLocaleString('default', { month: 'long' }),
+      now.getFullYear(),
+      daysMap,
+      new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(),
+      macroGoals,
+      streakData.current
+    );
+  }, [todayMeals, macroGoals, streakData.current]);
+
+  const yearLog = useMemo(() => {
+    const now = new Date();
+    const monthlyData = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ].map((monthAbbr, idx) => {
+      const monthPrefix = `${now.getFullYear()}-${String(idx + 1).padStart(2, '0')}`;
+      const monthMeals = todayMeals.filter((m) => getMealDate(m).startsWith(monthPrefix));
+      const daysTracked = new Set(monthMeals.map((m) => getMealDate(m))).size;
+      const totalCalories = monthMeals.reduce((acc, m) => acc + (m.nutrition?.calories || 0), 0);
+      const totalProtein = monthMeals.reduce((acc, m) => acc + (m.nutrition?.protein || 0), 0);
+      return {
+        monthAbbr,
+        averageCalories: daysTracked > 0 ? Math.round(totalCalories / daysTracked) : 0,
+        averageProtein: daysTracked > 0 ? Math.round(totalProtein / daysTracked) : 0,
+        successRate: daysTracked > 0 ? 100 : 0,
+        daysTracked,
+      };
+    });
+
+    return {
+      year: now.getFullYear(),
+      averageCalories: 0,
+      averageProtein: 0,
+      overallConsistencyRate: 0,
+      totalDaysTracked: daysTrackedCount,
+      months: monthlyData,
+    };
+  }, [todayMeals, daysTrackedCount]);
 
   return (
     <NutritionContext.Provider
@@ -191,13 +279,13 @@ export function NutritionProvider({ children }: { children: React.ReactNode }) {
         selectedDayLog,
         selectedDate,
         setSelectedDate,
-        weekLog: mockWeekLog,
-        monthLog: mockMonthLog,
-        yearLog: mockYearLog,
+        weekLog,
+        monthLog,
+        yearLog,
         achievements,
         currentStreak: streakData.current,
         longestStreak: streakData.longest,
-        daysTrackedCount: 23,
+        daysTrackedCount,
       }}
     >
       {children}

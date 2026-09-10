@@ -7,7 +7,7 @@ interface AuthContextType {
   user: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  loginWithGoogle: () => Promise<void>;
+  loginWithGoogle: () => Promise<UserProfile>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   completeOnboarding: () => Promise<void>;
@@ -61,11 +61,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const loginWithGoogle = async () => {
+  const loginWithGoogle = async (): Promise<UserProfile> => {
     setIsLoading(true);
     try {
       const profile = await AuthService.signInWithGoogle();
       setUser(profile);
+      return profile;
     } catch (err) {
       console.error('Login error:', err);
       throw err;

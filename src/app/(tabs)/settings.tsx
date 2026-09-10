@@ -117,13 +117,13 @@ export default function SettingsScreen() {
           icon="shield-checkmark-outline"
           title="Privacy Policy"
           onPress={() =>
-            Alert.alert('Privacy Policy', 'Your personal meal data stays completely local on your device during Phase 1.')
+            Alert.alert('Privacy Policy', 'Your personal meal data is securely encrypted and private to your account.')
           }
         />
         <SettingRow
           icon="information-circle-outline"
           title="About NutriTrack AI"
-          value="v1.0.0 (Phase 1 Mockup)"
+          value="v1.0.0"
         />
       </View>
 

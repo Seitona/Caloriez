@@ -221,7 +221,6 @@ export class HistoryService {
       }
     }
 
-    const longestStreak = Math.max(currentStreak, 18);
-    return { current: Math.max(1, currentStreak), longest: longestStreak };
+    return { current: currentStreak, longest: currentStreak };
   }
 }

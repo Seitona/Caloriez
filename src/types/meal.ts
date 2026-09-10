@@ -22,6 +22,7 @@ export interface Meal {
   foods: FoodItem[];
   nutrition: Nutrition;
   consumedAt: string; // ISO date string or human readable
+  date?: string; // YYYY-MM-DD
   confidence?: number;
 }
 

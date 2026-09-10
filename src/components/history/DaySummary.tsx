@@ -21,6 +21,18 @@ interface DaySummaryProps {
 export function DaySummary({ dayLogs, selectedDate, onSelectDate }: DaySummaryProps) {
   const { colors } = useTheme();
 
+  if (!dayLogs || dayLogs.length === 0) {
+    return (
+      <View style={styles.container}>
+        <EmptyState
+          icon="calendar-outline"
+          title="No history recorded yet"
+          description="Log your daily meals to start tracking trends, adherence, and streaks."
+        />
+      </View>
+    );
+  }
+
   const currentLog = dayLogs.find((d) => d.date === selectedDate) || dayLogs[0];
 
   const calorieRatio = currentLog.nutrition.calories / (currentLog.calorieTarget || 1);
