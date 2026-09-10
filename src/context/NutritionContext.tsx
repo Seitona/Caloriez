@@ -15,10 +15,10 @@ interface NutritionContextType {
   remainingProtein: number;
   remainingCarbs: number;
   remainingFat: number;
-  calorieProgress: number; // 0 to 1
-  proteinProgress: number; // 0 to 1
-  carbsProgress: number; // 0 to 1
-  fatProgress: number; // 0 to 1
+  calorieProgress: number;
+  proteinProgress: number;
+  carbsProgress: number;
+  fatProgress: number;
   addMeal: (mealData: Omit<Meal, 'id'>, localImageUri?: string) => Promise<Meal>;
   updateMeal: (id: string, updates: Partial<Meal>) => Promise<void>;
   deleteMeal: (id: string) => Promise<void>;
@@ -49,10 +49,6 @@ export function NutritionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [todayMeals, setTodayMeals] = useState<Meal[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(getTodayLocalDate());
-  const [dayLogs, setDayLogs] = useState<DayLog[]>([]);
-  const [achievements, setAchievements] = useState<Achievement[]>(
-    mockAchievements.map((a) => ({ ...a, unlocked: false, unlockedDate: undefined }))
-  );
 
   // Subscribe to real-time meal updates from Firestore for authenticated user
   useEffect(() => {
@@ -77,9 +73,20 @@ export function NutritionProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user]);
 
+  const getMealDate = (m: Meal): string => {
+    if (m.date) return m.date;
+    if (m.consumedAt) {
+      if (m.consumedAt.includes('T')) return m.consumedAt.split('T')[0];
+      if (m.consumedAt.match(/^\d{4}-\d{2}-\d{2}/)) return m.consumedAt.substring(0, 10);
+    }
+    return getTodayLocalDate();
+  };
+
   // Calculate consumed totals for today
   const consumedNutrition = useMemo<Nutrition>(() => {
-    return HistoryService.sumMealsNutrition(todayMeals);
+    const today = getTodayLocalDate();
+    const todaysMeals = todayMeals.filter((m) => getMealDate(m) === today);
+    return HistoryService.sumMealsNutrition(todaysMeals);
   }, [todayMeals]);
 
   const remainingCalories = Math.max(0, macroGoals.calories - consumedNutrition.calories);
@@ -92,84 +99,35 @@ export function NutritionProvider({ children }: { children: React.ReactNode }) {
   const carbsProgress = Math.min(1, consumedNutrition.carbs / (macroGoals.carbs || 1));
   const fatProgress = Math.min(1, consumedNutrition.fat / (macroGoals.fat || 1));
 
-  const addMeal = async (mealData: Omit<Meal, 'id'>, localImageUri?: string): Promise<Meal> => {
-    const uid = user?.id || 'usr_google_authenticated';
-    const newMeal = await MealService.addMeal(uid, mealData, localImageUri);
-    setTodayMeals((prev) => [newMeal, ...prev.filter((m) => m.id !== newMeal.id)]);
+  // Dynamically compute dayLogs from user's actual logged meals
+  const dayLogs: DayLog[] = useMemo(() => {
+    const today = getTodayLocalDate();
+    const map: Record<string, Meal[]> = {};
+    map[today] = [];
 
-    // Update today's entry in dayLogs
-    setDayLogs((prev) =>
-      prev.map((log) => {
-        if (log.date === '2026-09-10' || log.date === selectedDate) {
-          const updatedMeals = [newMeal, ...log.meals.filter((m) => m.id !== newMeal.id)];
-          const updatedNutrition = HistoryService.sumMealsNutrition(updatedMeals);
-          return {
-            ...log,
-            meals: updatedMeals,
-            nutrition: updatedNutrition,
-            goalReached: updatedNutrition.calories <= log.calorieTarget,
-            proteinGoalReached: updatedNutrition.protein >= log.proteinTarget,
-          };
-        }
-        return log;
-      })
-    );
+    todayMeals.forEach((m) => {
+      const d = getMealDate(m);
+      if (!map[d]) map[d] = [];
+      map[d].push(m);
+    });
 
-    return newMeal;
-  };
-
-  const updateMeal = async (id: string, updates: Partial<Meal>): Promise<void> => {
-    const uid = user?.id || 'usr_google_authenticated';
-    await MealService.updateMeal(uid, id, updates);
-
-    setTodayMeals((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, ...updates, nutrition: updates.nutrition || m.nutrition } : m))
-    );
-
-    setDayLogs((prev) =>
-      prev.map((log) => ({
-        ...log,
-        meals: log.meals.map((m) => (m.id === id ? { ...m, ...updates, nutrition: updates.nutrition || m.nutrition } : m)),
-      }))
-    );
-  };
-
-  const deleteMeal = async (id: string): Promise<void> => {
-    const uid = user?.id || 'usr_google_authenticated';
-    const mealToDelete = todayMeals.find((m) => m.id === id);
-    await MealService.deleteMeal(uid, id, mealToDelete?.imageUri);
-
-    setTodayMeals((prev) => prev.filter((m) => m.id !== id));
-
-    setDayLogs((prev) =>
-      prev.map((log) => {
-        const remaining = log.meals.filter((m) => m.id !== id);
-        const updatedNutrition = HistoryService.sumMealsNutrition(remaining);
-        return {
-          ...log,
-          meals: remaining,
-          nutrition: updatedNutrition,
-          goalReached: remaining.length > 0 && updatedNutrition.calories <= log.calorieTarget,
-          proteinGoalReached: remaining.length > 0 && updatedNutrition.protein >= log.proteinTarget,
-        };
-      })
-    );
-  };
+    const dates = Object.keys(map).sort().reverse();
+    return dates.map((dateStr) => {
+      const dObj = new Date(dateStr);
+      const displayDate = dObj.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+      return HistoryService.getDayLog(dateStr, displayDate, map[dateStr], macroGoals);
+    });
+  }, [todayMeals, macroGoals]);
 
   const selectedDayLog = useMemo(() => {
     const found = dayLogs.find((d) => d.date === selectedDate);
     if (found) return found;
-    return dayLogs[0];
-  }, [dayLogs, selectedDate]);
-
-  const getMealDate = (m: Meal): string => {
-    if (m.date) return m.date;
-    if (m.consumedAt) {
-      if (m.consumedAt.includes('T')) return m.consumedAt.split('T')[0];
-      if (m.consumedAt.match(/^\d{4}-\d{2}-\d{2}/)) return m.consumedAt.substring(0, 10);
-    }
-    return getTodayLocalDate();
-  };
+    return dayLogs[0] || HistoryService.getDayLog(selectedDate, selectedDate, [], macroGoals);
+  }, [dayLogs, selectedDate, macroGoals]);
 
   // Deterministically compute streaks from user's actual logged meal dates
   const streakData = useMemo(() => {
@@ -180,6 +138,46 @@ export function NutritionProvider({ children }: { children: React.ReactNode }) {
   const daysTrackedCount = useMemo(() => {
     return new Set(todayMeals.map((m) => getMealDate(m))).size;
   }, [todayMeals]);
+
+  // Dynamically compute achievements from real user tracking stats
+  const achievements: Achievement[] = useMemo(() => {
+    return mockAchievements.map((ach) => {
+      let unlocked = false;
+      let progress = ach.progress;
+
+      if (ach.id === 'ach_1') {
+        unlocked = daysTrackedCount >= 1;
+      } else if (ach.id === 'ach_2') {
+        unlocked = streakData.longest >= 3;
+        progress = { current: Math.min(3, streakData.longest), total: 3 };
+      } else if (ach.id === 'ach_3') {
+        const proteinDays = dayLogs.filter((d) => d.proteinGoalReached).length;
+        unlocked = proteinDays >= 5;
+        progress = { current: Math.min(5, proteinDays), total: 5 };
+      } else if (ach.id === 'ach_4') {
+        unlocked = streakData.longest >= 7;
+        progress = { current: Math.min(7, streakData.longest), total: 7 };
+      } else if (ach.id === 'ach_5') {
+        const calorieDays = dayLogs.filter((d) => d.goalReached).length;
+        unlocked = calorieDays >= 10;
+        progress = { current: Math.min(10, calorieDays), total: 10 };
+      } else if (ach.id === 'ach_6') {
+        unlocked = streakData.longest >= 14;
+        progress = { current: Math.min(14, streakData.longest), total: 14 };
+      } else if (ach.id === 'ach_7') {
+        unlocked = daysTrackedCount >= 30;
+        progress = { current: Math.min(30, daysTrackedCount), total: 30 };
+      } else if (ach.id === 'ach_8') {
+        unlocked = dayLogs.some((d) => d.goalReached && d.proteinGoalReached);
+      }
+
+      return {
+        ...ach,
+        unlocked,
+        progress,
+      };
+    });
+  }, [daysTrackedCount, streakData.longest, dayLogs]);
 
   // Compute dynamic week log from user's actual meals
   const weekLog = useMemo(() => {
@@ -257,6 +255,28 @@ export function NutritionProvider({ children }: { children: React.ReactNode }) {
       months: monthlyData,
     };
   }, [todayMeals, daysTrackedCount]);
+
+  const addMeal = async (mealData: Omit<Meal, 'id'>, localImageUri?: string): Promise<Meal> => {
+    const uid = user?.id || 'usr_google_authenticated';
+    const newMeal = await MealService.addMeal(uid, mealData, localImageUri);
+    setTodayMeals((prev) => [newMeal, ...prev.filter((m) => m.id !== newMeal.id)]);
+    return newMeal;
+  };
+
+  const updateMeal = async (id: string, updates: Partial<Meal>): Promise<void> => {
+    const uid = user?.id || 'usr_google_authenticated';
+    await MealService.updateMeal(uid, id, updates);
+    setTodayMeals((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, ...updates, nutrition: updates.nutrition || m.nutrition } : m))
+    );
+  };
+
+  const deleteMeal = async (id: string): Promise<void> => {
+    const uid = user?.id || 'usr_google_authenticated';
+    const mealToDelete = todayMeals.find((m) => m.id === id);
+    await MealService.deleteMeal(uid, id, mealToDelete?.imageUri);
+    setTodayMeals((prev) => prev.filter((m) => m.id !== id));
+  };
 
   return (
     <NutritionContext.Provider

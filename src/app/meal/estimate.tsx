@@ -6,8 +6,7 @@ import { BorderRadius, Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
 import { useNutrition } from '../../context/NutritionContext';
 import { useTheme } from '../../context/ThemeContext';
-import { sampleAIMealScans } from '../../data/mockMeals';
-import { FoodItem, MealType } from '../../types/meal';
+import { AIAnalysisResult, FoodItem, MealType } from '../../types/meal';
 import { formatNumber } from '../../utils/formatting';
 import { Button } from '../../components/common/Button';
 import { Card } from '../../components/common/Card';
@@ -16,23 +15,46 @@ import { SegmentedControl } from '../../components/common/SegmentedControl';
 import { ConfidenceBadge } from '../../components/meal/ConfidenceBadge';
 import { FoodItemRow } from '../../components/meal/FoodItemRow';
 
+const DEFAULT_ANALYSIS: AIAnalysisResult = {
+  detectedMealName: 'Custom Food Dish',
+  confidence: 0.9,
+  suggestedMealType: 'lunch',
+  foods: [
+    {
+      id: 'food_1',
+      name: 'Estimated Meal Plate',
+      portion: '1 serving (250g)',
+      grams: 250,
+      calories: 380,
+      protein: 28,
+      carbs: 45,
+      fat: 10,
+    },
+  ],
+  totals: {
+    calories: 380,
+    protein: 28,
+    carbs: 45,
+    fat: 10,
+  },
+};
+
 export default function AIMealEstimateScreen() {
   const { colors } = useTheme();
   const { addMeal } = useNutrition();
   const router = useRouter();
-  const params = useLocalSearchParams<{ sampleIndex?: string; imageUri?: string; aiResult?: string }>();
+  const params = useLocalSearchParams<{ imageUri?: string; aiResult?: string }>();
 
-  const aiResultParsed = React.useMemo(() => {
+  const aiResultParsed: AIAnalysisResult = React.useMemo(() => {
     if (params.aiResult) {
       try {
         return JSON.parse(params.aiResult);
       } catch {}
     }
-    return null;
+    return DEFAULT_ANALYSIS;
   }, [params.aiResult]);
 
-  const sampleIndex = Number(params.sampleIndex || '0');
-  const sample = aiResultParsed || sampleAIMealScans[sampleIndex] || sampleAIMealScans[0];
+  const sample = aiResultParsed;
   const imageUri = params.imageUri || sample.imageUri;
 
   const [mealType, setMealType] = useState<MealType>(sample.suggestedMealType || 'lunch');
@@ -48,7 +70,7 @@ export default function AIMealEstimateScreen() {
   const handleEdit = () => {
     router.push({
       pathname: '/meal/edit',
-      params: { sampleIndex: String(sampleIndex), imageUri, aiResult: params.aiResult },
+      params: { imageUri, aiResult: params.aiResult },
     });
   };
 
@@ -86,21 +108,25 @@ export default function AIMealEstimateScreen() {
       <Card style={styles.topCard} padding="base">
         <View style={styles.topRow}>
           {imageUri ? (
-            <Image source={{ uri: imageUri }} style={styles.mealThumb} />
-          ) : null}
+            <Image source={{ uri: imageUri }} style={styles.mealThumb} resizeMode="cover" />
+          ) : (
+            <View style={[styles.mealThumb, { backgroundColor: colors.surfaceSecondary, alignItems: 'center', justifyContent: 'center' }]}>
+              <Ionicons name="fast-food-outline" size={24} color={colors.textSecondary} />
+            </View>
+          )}
           <View style={styles.titleCol}>
             <ConfidenceBadge confidence={sample.confidence} />
-            <Text style={[Typography.h2, { color: colors.textPrimary, marginTop: 4 }]}>
+            <Text style={[Typography.h2, { color: colors.textPrimary, marginTop: 4 }]} numberOfLines={2}>
               {sample.detectedMealName}
             </Text>
             <Text style={[Typography.tiny, { color: colors.textSecondary }]}>
-              Estimated automatically by AI Vision
+              Analyzed with AI Calorie Lens
             </Text>
           </View>
         </View>
       </Card>
 
-      {/* Meal Type Classification Selector (Section 23) */}
+      {/* Meal Type Classification Selector */}
       <View style={styles.section}>
         <Text style={[Typography.captionMedium, { color: colors.textSecondary, marginBottom: Spacing.xs }]}>
           Meal Category
@@ -155,48 +181,47 @@ export default function AIMealEstimateScreen() {
         </View>
       </Card>
 
-      {/* Detected Food Items Breakdown */}
-      <View style={styles.breakdownHeader}>
-        <Text style={[Typography.h3, { color: colors.textPrimary }]}>
-          Identified Food Items ({sample.foods.length})
-        </Text>
+      {/* Breakdown Items List */}
+      <View style={styles.section}>
+        <View style={styles.breakdownHeader}>
+          <Text style={[Typography.h3, { color: colors.textPrimary }]}>
+            Detected Foods ({sample.foods.length})
+          </Text>
+          <Button
+            title="Adjust / Add"
+            onPress={handleEdit}
+            variant="ghost"
+            size="sm"
+            icon={<Ionicons name="create-outline" size={16} color={colors.accent} />}
+          />
+        </View>
+
+        <Card padding="sm" style={styles.foodsCard}>
+          {sample.foods.map((food, index) => (
+            <FoodItemRow
+              key={food.id || index}
+              item={food}
+            />
+          ))}
+        </Card>
+      </View>
+
+      {/* Bottom Save Action */}
+      <View style={styles.bottomActions}>
         <Button
-          title="Edit Details"
+          title="Save to Daily Log"
+          onPress={handleConfirmAndSave}
+          loading={isSaving}
+          size="lg"
+          icon={<Ionicons name="checkmark-sharp" size={20} color="#FFFFFF" />}
+          style={styles.saveButton}
+        />
+        <Button
+          title="Edit Details First"
           onPress={handleEdit}
           variant="outline"
-          size="sm"
-          icon={<Ionicons name="create-outline" size={14} color={colors.accent} />}
-        />
-      </View>
-
-      <View style={styles.foodList}>
-        {sample.foods.map((food: FoodItem) => (
-          <FoodItemRow key={food.id} item={food} />
-        ))}
-      </View>
-
-      {/* Disclaimer notice */}
-      <Text style={[Typography.tiny, styles.disclaimer, { color: colors.textSecondary }]}>
-        ⚠️ Nutritional values are computer vision estimates. You can fine-tune portion sizes or add missing items before confirming.
-      </Text>
-
-      {/* Bottom CTA Actions */}
-      <View style={styles.actionsRow}>
-        <Button
-          title="Edit Meal"
-          onPress={handleEdit}
-          variant="secondary"
-          size="lg"
-          style={styles.actionBtn}
-        />
-        <Button
-          title="Confirm & Save"
-          onPress={handleConfirmAndSave}
-          variant="primary"
-          size="lg"
-          loading={isSaving}
-          icon={<Ionicons name="checkmark-sharp" size={20} color="#FFFFFF" />}
-          style={styles.actionBtn}
+          size="md"
+          style={styles.editSecondaryBtn}
         />
       </View>
     </ScreenContainer>
@@ -209,36 +234,36 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xxxl,
   },
   topCard: {
-    marginBottom: Spacing.base,
+    marginBottom: Spacing.md,
   },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
   },
   mealThumb: {
-    width: 74,
-    height: 74,
+    width: 68,
+    height: 68,
     borderRadius: BorderRadius.md,
+    marginRight: Spacing.md,
   },
   titleCol: {
     flex: 1,
   },
   section: {
-    marginBottom: Spacing.base,
+    marginBottom: Spacing.md,
   },
   totalsCard: {
-    marginBottom: Spacing.base,
+    marginBottom: Spacing.md,
   },
   totalsHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
   calBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -255,25 +280,21 @@ const styles = StyleSheet.create({
   },
   breakdownHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
-    marginTop: Spacing.xs,
+    alignItems: 'center',
+    marginBottom: Spacing.xs,
   },
-  foodList: {
-    marginBottom: Spacing.base,
+  foodsCard: {
+    overflow: 'hidden',
   },
-  disclaimer: {
-    textAlign: 'center',
-    lineHeight: 16,
-    marginBottom: Spacing.lg,
+  bottomActions: {
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
   },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-    marginTop: Spacing.xs,
+  saveButton: {
+    backgroundColor: '#F97316',
   },
-  actionBtn: {
-    flex: 1,
+  editSecondaryBtn: {
+    borderWidth: 1,
   },
 });

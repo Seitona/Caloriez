@@ -14,7 +14,6 @@ import { BorderRadius, Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
 import { useNutrition } from '../../context/NutritionContext';
 import { useTheme } from '../../context/ThemeContext';
-import { sampleAIMealScans } from '../../data/mockMeals';
 import { FoodItem, MealType } from '../../types/meal';
 import { formatNumber } from '../../utils/formatting';
 import { Button } from '../../components/common/Button';
@@ -29,38 +28,54 @@ export default function EditEstimateScreen() {
   const { addMeal } = useNutrition();
   const router = useRouter();
   const params = useLocalSearchParams<{
-    sampleIndex?: string;
     imageUri?: string;
     isNewManual?: string;
+    aiResult?: string;
   }>();
 
   const isManual = params.isNewManual === 'true';
-  const sampleIndex = Number(params.sampleIndex || '0');
-  const sample = isManual
+
+  const aiResultParsed = useMemo(() => {
+    if (params.aiResult) {
+      try {
+        return JSON.parse(params.aiResult);
+      } catch {}
+    }
+    return null;
+  }, [params.aiResult]);
+
+  const initialData = isManual
     ? {
-        detectedMealName: 'Custom Home Meal',
+        detectedMealName: '',
         confidence: 1.0,
         suggestedMealType: 'lunch' as MealType,
         imageUri: undefined,
+        foods: [] as FoodItem[],
+        totals: { calories: 0, protein: 0, carbs: 0, fat: 0 },
+      }
+    : aiResultParsed || {
+        detectedMealName: 'Custom Meal',
+        confidence: 1.0,
+        suggestedMealType: 'lunch' as MealType,
+        imageUri: params.imageUri,
         foods: [
           {
-            id: 'manual_1',
-            name: 'Grilled Chicken Breast',
-            portion: '150 g',
-            grams: 150,
-            calories: 250,
-            protein: 45,
-            carbs: 0,
-            fat: 5,
+            id: 'item_1',
+            name: 'Meal Serving',
+            portion: '1 plate',
+            grams: 200,
+            calories: 350,
+            protein: 25,
+            carbs: 40,
+            fat: 10,
           },
         ],
-        totals: { calories: 250, protein: 45, carbs: 0, fat: 5 },
-      }
-    : sampleAIMealScans[sampleIndex] || sampleAIMealScans[0];
+        totals: { calories: 350, protein: 25, carbs: 40, fat: 10 },
+      };
 
-  const [mealName, setMealName] = useState(sample.detectedMealName);
-  const [mealType, setMealType] = useState<MealType>(sample.suggestedMealType || 'lunch');
-  const [foods, setFoods] = useState<FoodItem[]>(sample.foods);
+  const [mealName, setMealName] = useState(initialData.detectedMealName);
+  const [mealType, setMealType] = useState<MealType>(initialData.suggestedMealType || 'lunch');
+  const [foods, setFoods] = useState<FoodItem[]>(initialData.foods);
 
   // New Item Modal states
   const [isAddItemModalVisible, setIsAddItemModalVisible] = useState(false);
@@ -132,11 +147,11 @@ export default function EditEstimateScreen() {
       await addMeal({
         name: mealName.trim() || 'Logged Meal',
         mealType,
-        imageUri: params.imageUri || sample.imageUri,
+        imageUri: params.imageUri || initialData.imageUri,
         nutrition: totals,
         foods,
         consumedAt: timeStr,
-        confidence: sample.confidence,
+        confidence: initialData.confidence,
       });
 
       setShowSuccessModal(true);

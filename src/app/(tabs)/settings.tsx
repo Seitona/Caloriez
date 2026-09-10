@@ -1,13 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, StyleSheet, Text, View } from 'react-native';
 import { BorderRadius, Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
 import { useAuth } from '../../context/AuthContext';
 import { useNutrition } from '../../context/NutritionContext';
 import { useTheme } from '../../context/ThemeContext';
+import { AiService } from '../../services/aiService';
+import { Button } from '../../components/common/Button';
 import { ConfirmationModal } from '../../components/common/ConfirmationModal';
+import { Input } from '../../components/common/Input';
 import { ScreenContainer } from '../../components/common/ScreenContainer';
 import { SettingRow } from '../../components/settings/SettingRow';
 import { ThemeSelector } from '../../components/settings/ThemeSelector';
@@ -19,6 +22,15 @@ export default function SettingsScreen() {
   const router = useRouter();
 
   const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const [geminiKey, setGeminiKey] = useState<string | null>(null);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [inputApiKey, setInputApiKey] = useState('');
+
+  React.useEffect(() => {
+    AiService.getGeminiApiKey().then((key) => {
+      setGeminiKey(key);
+    });
+  }, []);
 
   const handleSignOutConfirm = () => {
     setShowSignOutModal(false);
@@ -121,6 +133,15 @@ export default function SettingsScreen() {
           }
         />
         <SettingRow
+          icon="sparkles-outline"
+          title="Gemini AI Vision Key"
+          value={geminiKey ? 'Configured' : 'Default Engine'}
+          onPress={() => {
+            setInputApiKey(geminiKey || '');
+            setShowApiKeyModal(true);
+          }}
+        />
+        <SettingRow
           icon="information-circle-outline"
           title="About Caloriez"
           value="v1.0.0"
@@ -144,6 +165,50 @@ export default function SettingsScreen() {
         onConfirm={handleSignOutConfirm}
         onCancel={() => setShowSignOutModal(false)}
       />
+
+      {/* Gemini Vision API Key Modal */}
+      <Modal visible={showApiKeyModal} transparent animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[Typography.h3, { color: colors.textPrimary }]}>
+              Gemini Vision API Key
+            </Text>
+            <Text style={[Typography.caption, { color: colors.textSecondary, marginVertical: Spacing.sm }]}>
+              Optionally enter a Google Gemini API key to enable direct cloud multimodal vision inference, or leave blank to use the built-in nutrition engine.
+            </Text>
+            <Input
+              value={inputApiKey}
+              onChangeText={setInputApiKey}
+              placeholder="Paste AIzaSy... key (or clear)"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <View style={styles.modalBtnRow}>
+              <Button
+                title="Cancel"
+                variant="ghost"
+                onPress={() => setShowApiKeyModal(false)}
+                style={{ flex: 1 }}
+              />
+              <Button
+                title="Save Key"
+                onPress={async () => {
+                  await AiService.setGeminiApiKey(inputApiKey);
+                  setGeminiKey(inputApiKey.trim() || null);
+                  setShowApiKeyModal(false);
+                  Alert.alert(
+                    'Settings Saved',
+                    inputApiKey.trim()
+                      ? 'Gemini Vision API Key configured successfully.'
+                      : 'Gemini key cleared. Using built-in nutrition engine.'
+                  );
+                }}
+                style={{ flex: 1, backgroundColor: '#F97316' }}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -168,5 +233,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
     marginBottom: Spacing.sm,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.xl,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    borderWidth: 1,
+  },
+  modalBtnRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
   },
 });

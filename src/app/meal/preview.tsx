@@ -5,7 +5,6 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import { BorderRadius, Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
 import { useTheme } from '../../context/ThemeContext';
-import { sampleAIMealScans } from '../../data/mockMeals';
 import { Button } from '../../components/common/Button';
 import { Card } from '../../components/common/Card';
 import { ScreenContainer } from '../../components/common/ScreenContainer';
@@ -13,21 +12,22 @@ import { ScreenContainer } from '../../components/common/ScreenContainer';
 export default function PhotoReviewScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const params = useLocalSearchParams<{ sampleIndex?: string; imageUri?: string }>();
+  const params = useLocalSearchParams<{ imageUri?: string; imageBase64?: string }>();
 
-  const sampleIndex = Number(params.sampleIndex || '0');
-  const sample = sampleAIMealScans[sampleIndex] || sampleAIMealScans[0];
-  const imageUri = params.imageUri || sample.imageUri;
+  const imageUri = params.imageUri;
+  const imageBase64 = params.imageBase64;
 
   const handleRetake = () => {
     router.back();
   };
 
   const handleUsePhoto = () => {
-    // Navigate to AI Analyzing screen (Screen 12)
     router.push({
       pathname: '/meal/analyze',
-      params: { sampleIndex: String(sampleIndex), imageUri },
+      params: {
+        imageUri: imageUri || '',
+        imageBase64: imageBase64 || '',
+      },
     });
   };
 
@@ -45,11 +45,20 @@ export default function PhotoReviewScreen() {
 
       {/* Image Preview Box */}
       <View style={[styles.imageContainer, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
-        <Image source={{ uri: imageUri }} style={styles.previewImage} resizeMode="cover" />
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={styles.previewImage} resizeMode="cover" />
+        ) : (
+          <View style={styles.emptyImageBox}>
+            <Ionicons name="camera-outline" size={64} color={colors.textSecondary} />
+            <Text style={[Typography.body, { color: colors.textSecondary, marginTop: Spacing.sm }]}>
+              No photo captured
+            </Text>
+          </View>
+        )}
         <View style={styles.badgeOverlay}>
           <Ionicons name="checkmark-circle" size={16} color={colors.accent} />
           <Text style={[Typography.tiny, { color: '#FFFFFF', marginLeft: 4, fontWeight: '600' }]}>
-            High Quality Photo
+            Photo Ready
           </Text>
         </View>
       </View>
@@ -59,7 +68,7 @@ export default function PhotoReviewScreen() {
         <View style={styles.tipRow}>
           <Ionicons name="bulb-outline" size={20} color={colors.warning} />
           <Text style={[Typography.caption, { color: colors.textSecondary, flex: 1, marginLeft: Spacing.sm }]}>
-            Good lighting and visible side dishes significantly improve AI portion accuracy.
+            Good lighting and visible plate boundaries improve calorie accuracy.
           </Text>
         </View>
       </Card>
@@ -75,12 +84,12 @@ export default function PhotoReviewScreen() {
           style={styles.button}
         />
         <Button
-          title="Use Photo"
+          title="Analyze Food"
           onPress={handleUsePhoto}
-          variant="primary"
+          disabled={!imageUri}
           size="lg"
           icon={<Ionicons name="sparkles" size={18} color="#FFFFFF" />}
-          style={styles.button}
+          style={[styles.button, styles.primaryButton]}
         />
       </View>
     </ScreenContainer>
@@ -89,39 +98,44 @@ export default function PhotoReviewScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    padding: Spacing.base,
     justifyContent: 'space-between',
+    padding: Spacing.base,
     flex: 1,
   },
   header: {
-    marginTop: Spacing.base,
+    marginTop: Spacing.xs,
     marginBottom: Spacing.md,
   },
   imageContainer: {
     flex: 1,
-    borderRadius: BorderRadius.xl,
+    borderRadius: BorderRadius.lg,
     overflow: 'hidden',
     position: 'relative',
     borderWidth: 1,
-    maxHeight: 440,
+    marginBottom: Spacing.md,
   },
   previewImage: {
     width: '100%',
     height: '100%',
   },
+  emptyImageBox: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   badgeOverlay: {
     position: 'absolute',
-    top: Spacing.md,
-    left: Spacing.md,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 5,
-    borderRadius: BorderRadius.full,
+    top: Spacing.base,
+    right: Spacing.base,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
   },
   tipCard: {
-    marginVertical: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   tipRow: {
     flexDirection: 'row',
@@ -130,9 +144,12 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: 'row',
     gap: Spacing.md,
-    marginBottom: Spacing.base,
+    marginBottom: Spacing.sm,
   },
   button: {
     flex: 1,
+  },
+  primaryButton: {
+    backgroundColor: '#F97316',
   },
 });

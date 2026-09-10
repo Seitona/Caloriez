@@ -15,7 +15,6 @@ import {
 } from 'firebase/firestore';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { db, storage } from './firebase';
-import { initialTodayMeals } from '../data/mockMeals';
 import { FoodItem, Meal, MealType } from '../types/meal';
 import { Nutrition } from '../types/nutrition';
 
@@ -210,6 +209,10 @@ export class MealService {
             });
             AsyncStorage.setItem(LOCAL_MEALS_KEY, JSON.stringify(meals));
             onUpdate(meals);
+          } else {
+            // Real empty meal list for user
+            AsyncStorage.setItem(LOCAL_MEALS_KEY, JSON.stringify([]));
+            onUpdate([]);
           }
         },
         (error) => {
@@ -234,7 +237,7 @@ export class MealService {
         return JSON.parse(cached);
       } catch {}
     }
-    // Return baseline initial meals if cache is empty
-    return initialTodayMeals;
+    // Return clean empty meals if cache is empty
+    return [];
   }
 }

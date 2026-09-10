@@ -2,26 +2,61 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BorderRadius, Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
 import { useTheme } from '../../context/ThemeContext';
-import { sampleAIMealScans } from '../../data/mockMeals';
 
-export default function CameraMockScreen() {
+export default function CameraScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const [flash, setFlash] = useState(false);
-  const [selectedSampleIndex, setSelectedSampleIndex] = useState(0);
+  const [capturing, setCapturing] = useState(false);
 
-  const currentSample = sampleAIMealScans[selectedSampleIndex];
+  const handleCapture = async () => {
+    if (capturing) return;
+    try {
+      setCapturing(true);
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          'Camera Permission Required',
+          'Please allow camera access in your device settings to photograph your food.'
+        );
+        setCapturing(false);
+        return;
+      }
 
-  const handleCapture = () => {
-    // Navigate to Photo Review (Screen 11) with captured photo
-    router.push({
-      pathname: '/meal/preview',
-      params: { sampleIndex: String(selectedSampleIndex) },
-    });
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.85,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]?.uri) {
+        router.push({
+          pathname: '/meal/preview',
+          params: {
+            imageUri: result.assets[0].uri,
+            imageBase64: result.assets[0].base64 || undefined,
+          },
+        });
+      }
+    } catch (e: any) {
+      console.warn('Camera launch failed:', e);
+      Alert.alert(
+        'Camera Notice',
+        'Camera could not be launched. You can also pick an existing food photo from your gallery.',
+        [
+          { text: 'Pick from Gallery', onPress: handleOpenGallery },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+    } finally {
+      setCapturing(false);
+    }
   };
 
   const handleOpenGallery = async () => {
@@ -30,35 +65,40 @@ export default function CameraMockScreen() {
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 0.8,
+        quality: 0.85,
+        base64: true,
       });
 
       if (!result.canceled && result.assets && result.assets[0]?.uri) {
         router.push({
           pathname: '/meal/preview',
-          params: { imageUri: result.assets[0].uri, sampleIndex: '0' },
+          params: {
+            imageUri: result.assets[0].uri,
+            imageBase64: result.assets[0].base64 || undefined,
+          },
         });
       }
-    } catch {
-      // Fallback to sample
-      router.push({
-        pathname: '/meal/preview',
-        params: { sampleIndex: String(selectedSampleIndex) },
-      });
+    } catch (e: any) {
+      console.warn('Gallery pick error:', e);
     }
   };
 
   return (
     <View style={styles.container}>
-      {/* Viewfinder Preview with sample dish mockup */}
+      {/* Viewfinder Frame */}
       <View style={styles.viewfinder}>
-        <Image
-          source={{ uri: currentSample.imageUri }}
-          style={styles.cameraImage}
-          resizeMode="cover"
-        />
+        {/* Background Dark Canvas */}
+        <View style={styles.darkCanvas}>
+          <Ionicons name="restaurant-outline" size={72} color="rgba(255,255,255,0.15)" />
+          <Text style={[Typography.body, styles.instructionsText]}>
+            Position your meal in the frame
+          </Text>
+          <Text style={[Typography.caption, styles.subInstructionsText]}>
+            Tap the shutter button below to snap a photo with your device camera
+          </Text>
+        </View>
 
-        {/* Viewfinder focus reticle frame */}
+        {/* Viewfinder Focus Reticle Frame */}
         <View style={styles.reticleContainer}>
           <View style={[styles.corner, styles.cornerTL]} />
           <View style={[styles.corner, styles.cornerTR]} />
@@ -67,8 +107,8 @@ export default function CameraMockScreen() {
 
           <View style={styles.focusPill}>
             <Ionicons name="scan-outline" size={16} color="#FFFFFF" />
-            <Text style={[Typography.tiny, { color: '#FFFFFF', marginLeft: 4 }]}>
-              Food in viewfinder
+            <Text style={[Typography.tiny, { color: '#FFFFFF', marginLeft: 6, fontWeight: '600' }]}>
+              AI Calorie Lens
             </Text>
           </View>
         </View>
@@ -78,21 +118,21 @@ export default function CameraMockScreen() {
           <TouchableOpacity
             onPress={() => router.back()}
             style={styles.circleBtn}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <Ionicons name="close" size={24} color="#FFFFFF" />
           </TouchableOpacity>
 
           <View style={styles.titleBadge}>
             <Text style={[Typography.captionMedium, { color: '#FFFFFF' }]}>
-              AI Food Scanner
+              Food Scanner
             </Text>
           </View>
 
           <TouchableOpacity
             onPress={() => setFlash(!flash)}
             style={[styles.circleBtn, flash && { backgroundColor: '#FBBF24' }]}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <Ionicons
               name={flash ? 'flash' : 'flash-off'}
@@ -102,34 +142,13 @@ export default function CameraMockScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Sample Food Switcher (convenient interactive switcher in camera preview) */}
-        <View style={styles.sampleBar}>
-          <Text style={[Typography.tiny, { color: 'rgba(255,255,255,0.8)', marginBottom: 6 }]}>
-            TAP TO SWITCH DETECTED DISH:
-          </Text>
-          <View style={styles.samplePills}>
-            {sampleAIMealScans.map((s, idx) => {
-              const isSelected = selectedSampleIndex === idx;
-              return (
-                <TouchableOpacity
-                  key={s.detectedMealName}
-                  onPress={() => setSelectedSampleIndex(idx)}
-                  style={[
-                    styles.samplePill,
-                    isSelected && { backgroundColor: colors.accent, borderColor: colors.accent },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      Typography.tiny,
-                      { color: '#FFFFFF', fontWeight: isSelected ? '700' : '400' },
-                    ]}
-                  >
-                    {s.detectedMealName.split(' ')[0]}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+        {/* Tips Footer in Viewfinder */}
+        <View style={styles.tipsBar}>
+          <View style={styles.tipPill}>
+            <Ionicons name="sparkles" size={14} color="#FBBF24" />
+            <Text style={[Typography.tiny, { color: '#FFFFFF', marginLeft: 6 }]}>
+              Detects proteins, carbs, fats, & portions instantly
+            </Text>
           </View>
         </View>
       </View>
@@ -139,20 +158,28 @@ export default function CameraMockScreen() {
         <TouchableOpacity
           onPress={handleOpenGallery}
           style={styles.galleryShortcut}
+          activeOpacity={0.7}
         >
           <Ionicons name="images-outline" size={26} color="#FFFFFF" />
         </TouchableOpacity>
 
-        {/* Shutter Button */}
+        {/* Real Shutter Button */}
         <TouchableOpacity
           onPress={handleCapture}
           activeOpacity={0.7}
+          disabled={capturing}
           style={styles.shutterOuter}
         >
-          <View style={styles.shutterInner} />
+          <View style={[styles.shutterInner, capturing && { opacity: 0.6 }]} />
         </TouchableOpacity>
 
-        <View style={{ width: 48 }} />
+        <TouchableOpacity
+          onPress={handleOpenGallery}
+          style={styles.galleryShortcut}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="folder-open-outline" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -168,9 +195,24 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
-  cameraImage: {
-    width: '100%',
-    height: '100%',
+  darkCanvas: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: '#0D1117',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  instructionsText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    marginTop: Spacing.md,
+    textAlign: 'center',
+  },
+  subInstructionsText: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginTop: Spacing.xs,
+    textAlign: 'center',
+    maxWidth: 280,
   },
   topBar: {
     position: 'absolute',
@@ -186,7 +228,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -194,23 +236,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: 6,
     borderRadius: BorderRadius.full,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
   },
   reticleContainer: {
     position: 'absolute',
-    top: '20%',
+    top: '22%',
     left: '10%',
     right: '10%',
-    bottom: '30%',
-    borderColor: 'transparent',
+    bottom: '26%',
     alignItems: 'center',
     justifyContent: 'center',
   },
   corner: {
     position: 'absolute',
-    width: 28,
-    height: 28,
-    borderColor: '#FFFFFF',
+    width: 32,
+    height: 32,
+    borderColor: '#F97316',
   },
   cornerTL: { top: 0, left: 0, borderTopWidth: 3, borderLeftWidth: 3 },
   cornerTR: { top: 0, right: 0, borderTopWidth: 3, borderRightWidth: 3 },
@@ -219,61 +260,57 @@ const styles = StyleSheet.create({
   focusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(249, 115, 22, 0.4)',
+  },
+  tipsBar: {
+    position: 'absolute',
+    bottom: 24,
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+  },
+  tipPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
     paddingHorizontal: Spacing.md,
     paddingVertical: 6,
     borderRadius: BorderRadius.full,
   },
-  sampleBar: {
-    position: 'absolute',
-    bottom: 20,
-    left: 16,
-    right: 16,
-    alignItems: 'center',
-  },
-  samplePills: {
-    flexDirection: 'row',
-    gap: 6,
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-  },
-  samplePill: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
   bottomControls: {
-    height: 110,
+    height: 120,
     backgroundColor: '#000000',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingBottom: 20,
+    paddingBottom: 24,
   },
   galleryShortcut: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   shutterOuter: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     borderWidth: 4,
     borderColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
   shutterInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#FFFFFF',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#F97316',
   },
 });

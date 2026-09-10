@@ -5,7 +5,6 @@ import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import { BorderRadius, Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
 import { useTheme } from '../../context/ThemeContext';
-import { sampleAIMealScans } from '../../data/mockMeals';
 import { AiService } from '../../services/aiService';
 import { Button } from '../../components/common/Button';
 import { Card } from '../../components/common/Card';
@@ -15,11 +14,10 @@ import { RotatingMessage } from '../../components/meal/RotatingMessage';
 export default function AIAnalyzingScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const params = useLocalSearchParams<{ sampleIndex?: string; imageUri?: string }>();
+  const params = useLocalSearchParams<{ imageUri?: string; imageBase64?: string }>();
 
-  const sampleIndex = Number(params.sampleIndex || '0');
-  const sample = sampleAIMealScans[sampleIndex] || sampleAIMealScans[0];
-  const imageUri = params.imageUri || sample.imageUri;
+  const imageUri = params.imageUri;
+  const imageBase64 = params.imageBase64;
 
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -31,7 +29,7 @@ export default function AIAnalyzingScreen() {
     async function executeAIInference() {
       try {
         setHasError(false);
-        const result = await AiService.estimateMealFromImage(imageUri || '', sampleIndex);
+        const result = await AiService.estimateMealFromImage(imageUri || '', imageBase64);
         if (isMounted) {
           setAnalysisResult(result);
         }
@@ -48,14 +46,13 @@ export default function AIAnalyzingScreen() {
     return () => {
       isMounted = false;
     };
-  }, [imageUri, sampleIndex]);
+  }, [imageUri, imageBase64]);
 
   const handleAnalysisComplete = () => {
     router.replace({
       pathname: '/meal/estimate',
       params: {
-        sampleIndex: String(sampleIndex),
-        imageUri,
+        imageUri: imageUri || '',
         aiResult: analysisResult ? JSON.stringify(analysisResult) : undefined,
       },
     });
@@ -63,7 +60,7 @@ export default function AIAnalyzingScreen() {
 
   const handleRetry = () => {
     setHasError(false);
-    AiService.estimateMealFromImage(imageUri || '', sampleIndex)
+    AiService.estimateMealFromImage(imageUri || '', imageBase64)
       .then((res) => {
         setAnalysisResult(res);
       })
@@ -78,10 +75,16 @@ export default function AIAnalyzingScreen() {
       <View style={styles.content}>
         {/* Scanning Food Photo Card */}
         <View style={[styles.photoCard, { borderColor: colors.accent }]}>
-          <Image source={{ uri: imageUri }} style={styles.photo} resizeMode="cover" />
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={styles.photo} resizeMode="cover" />
+          ) : (
+            <View style={[styles.photo, styles.placeholderBox]}>
+              <Ionicons name="fast-food-outline" size={64} color="rgba(255,255,255,0.3)" />
+            </View>
+          )}
 
           {/* Animated Scanning Line overlay */}
-          <View style={[styles.scanBeam, { backgroundColor: colors.accent }]} />
+          <View style={[styles.scanBeam, { backgroundColor: '#F97316' }]} />
 
           <View style={styles.aiPill}>
             <Ionicons name="sparkles" size={14} color="#FFFFFF" />
@@ -93,7 +96,7 @@ export default function AIAnalyzingScreen() {
 
         {!hasError ? (
           <>
-            <ActivityIndicator size="large" color={colors.accent} style={styles.spinner} />
+            <ActivityIndicator size="large" color="#F97316" style={styles.spinner} />
             <RotatingMessage onComplete={handleAnalysisComplete} intervalMs={1100} />
 
             <Button
@@ -105,7 +108,7 @@ export default function AIAnalyzingScreen() {
             />
           </>
         ) : (
-          /* Production error recovery state (Section 33) */
+          /* Error recovery state */
           <Card style={styles.errorCard} padding="lg">
             <Ionicons name="alert-circle" size={36} color={colors.danger} />
             <Text style={[Typography.h3, { color: colors.danger, marginTop: Spacing.sm }]}>
@@ -138,77 +141,77 @@ export default function AIAnalyzingScreen() {
           </Card>
         )}
       </View>
-
-      <Text style={[Typography.tiny, styles.footerNote, { color: colors.textSecondary }]}>
-        Authenticated AI inference endpoint with client-side rate protection.
-      </Text>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: Spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'space-between',
     flex: 1,
+    justifyContent: 'center',
+    padding: Spacing.xl,
   },
   content: {
     alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
     width: '100%',
   },
   photoCard: {
-    width: 240,
-    height: 240,
+    width: 260,
+    height: 260,
     borderRadius: BorderRadius.xl,
     overflow: 'hidden',
-    position: 'relative',
     borderWidth: 2,
+    position: 'relative',
     marginBottom: Spacing.xl,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
   },
   photo: {
     width: '100%',
     height: '100%',
   },
+  placeholderBox: {
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   scanBeam: {
     position: 'absolute',
+    top: '45%',
     left: 0,
     right: 0,
-    top: '48%',
     height: 3,
-    opacity: 0.85,
+    opacity: 0.9,
   },
   aiPill: {
     position: 'absolute',
-    bottom: Spacing.sm,
-    alignSelf: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    top: Spacing.md,
+    left: Spacing.md,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
     paddingHorizontal: Spacing.md,
-    paddingVertical: 5,
+    paddingVertical: 4,
     borderRadius: BorderRadius.full,
     flexDirection: 'row',
     alignItems: 'center',
   },
   spinner: {
-    marginVertical: Spacing.sm,
+    marginVertical: Spacing.lg,
   },
   skipButton: {
-    marginTop: Spacing.sm,
+    marginTop: Spacing.lg,
   },
   errorCard: {
     alignItems: 'center',
     width: '100%',
-    marginTop: Spacing.base,
+    marginTop: Spacing.md,
   },
   errorButtonsRow: {
     flexDirection: 'row',
     gap: Spacing.sm,
-    marginTop: Spacing.sm,
-  },
-  footerNote: {
-    textAlign: 'center',
-    marginBottom: Spacing.base,
+    width: '100%',
+    marginTop: Spacing.md,
   },
 });
