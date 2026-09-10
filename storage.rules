@@ -1,0 +1,26 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidImage() {
+      return request.resource == null || (
+        request.resource.size < 10 * 1024 * 1024 && // Under 10MB
+        request.resource.contentType.matches('image/.*')
+      );
+    }
+
+    // User's private meal images
+    match /users/{userId}/meals/{mealId}/{imageName} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId) && isValidImage();
+      allow delete: if isOwner(userId);
+    }
+  }
+}
