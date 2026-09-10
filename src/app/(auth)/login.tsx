@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, StyleSheet, Text, View } from 'react-native';
 import { BorderRadius, Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
 import { useAuth } from '../../context/AuthContext';
@@ -40,9 +40,11 @@ export default function LoginScreen() {
     <ScreenContainer scrollable={false} contentContainerStyle={styles.container}>
       {/* Top Branding Section */}
       <View style={styles.topSection}>
-        <View style={[styles.logoBox, { backgroundColor: colors.accentLight }]}>
-          <Ionicons name="sparkles" size={38} color={colors.accent} />
-        </View>
+        <Image
+          source={require('../../../assets/images/caloriez-mascot.png')}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
         <Text style={[Typography.hero, styles.title, { color: colors.textPrimary }]}>
           Caloriez
         </Text>
@@ -115,13 +117,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: Spacing.xxl,
   },
-  logoBox: {
-    width: 80,
-    height: 80,
-    borderRadius: BorderRadius.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.lg,
+  logoImage: {
+    width: 96,
+    height: 96,
+    borderRadius: 22,
+    marginBottom: Spacing.md,
   },
   title: {
     textAlign: 'center',

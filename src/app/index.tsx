@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import { BorderRadius, Spacing } from '../constants/spacing';
 import { Typography } from '../constants/typography';
 import { useAuth } from '../context/AuthContext';
@@ -29,10 +29,12 @@ export default function SplashScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.centerContent}>
-        {/* App Logo Icon */}
-        <View style={[styles.logoContainer, { backgroundColor: colors.accentLight }]}>
-          <Ionicons name="sparkles" size={44} color={colors.accent} />
-        </View>
+        {/* Caloriez Fun Mascot Logo */}
+        <Image
+          source={require('../../assets/images/caloriez-mascot.png')}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
 
         {/* App Name & Tagline */}
         <Text style={[Typography.hero, styles.title, { color: colors.textPrimary }]}>
@@ -66,13 +68,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flex: 1,
   },
-  logoContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: BorderRadius.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.lg,
+  logoImage: {
+    width: 110,
+    height: 110,
+    borderRadius: 26,
+    marginBottom: Spacing.md,
   },
   title: {
     textAlign: 'center',

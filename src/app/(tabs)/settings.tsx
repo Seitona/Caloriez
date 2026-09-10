@@ -124,6 +124,12 @@ export default function SettingsScreen() {
           icon="information-circle-outline"
           title="About Caloriez"
           value="v1.0.0"
+          onPress={() =>
+            Alert.alert(
+              'Caloriez 🔥 v1.0.0',
+              'Your friendly cartoon calorie companion! Eat well, track easily, and achieve your health goals effortlessly.'
+            )
+          }
         />
       </View>
 
