@@ -71,11 +71,12 @@ export class AuthService {
       const provider = new GoogleAuthProvider();
       provider.addScope('profile');
       provider.addScope('email');
+      provider.setCustomParameters({ prompt: 'select_account' });
 
-      // Attempt web popup with 6-second timeout so it never hangs indefinitely
+      // Attempt web popup with 12-second timeout
       const popupPromise = signInWithPopup(auth, provider);
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Firebase popup timed out or was blocked')), 6000)
+        setTimeout(() => reject(new Error('Sign-in window timed out')), 12000)
       );
 
       const result = await Promise.race([popupPromise, timeoutPromise]);
@@ -85,17 +86,17 @@ export class AuthService {
       let profile = await UserService.getUserProfile(user.uid);
 
       if (!profile) {
-        // Create initial profile
+        // Create initial profile with real Google user info
         profile = {
           id: user.uid,
-          displayName: user.displayName || 'Google User',
+          displayName: user.displayName || '',
           email: user.email || '',
           avatarUrl: user.photoURL || undefined,
-          age: 28,
+          age: 25,
           sex: 'male',
-          heightCm: 175,
-          weightKg: 76,
-          targetWeightKg: 70,
+          heightCm: 170,
+          weightKg: 70,
+          targetWeightKg: 65,
           weeklyRateKg: 0.5,
           units: 'metric',
           fitnessGoal: 'lose',
@@ -115,8 +116,26 @@ export class AuthService {
       await AsyncStorage.setItem(AUTH_CACHE_KEY, JSON.stringify(profile));
       return profile;
     } catch (err: any) {
-      console.warn('Google Sign-In with Firebase popup failed/cancelled/timed-out, using fallback session:', err?.message);
-      return await AuthService.getFallbackSession();
+      console.warn('Google Sign-In with Firebase popup failed:', err?.code, err?.message);
+
+      if (err?.code === 'auth/unauthorized-domain') {
+        throw new Error(
+          'Domain not authorized: Please add "caloriez.vercel.app" to Authorized Domains in your Firebase Console (Authentication > Settings > Authorized domains).'
+        );
+      }
+      if (err?.code === 'auth/operation-not-allowed') {
+        throw new Error(
+          'Google Sign-In is disabled: Please enable Google in Firebase Console (Authentication > Sign-in method).'
+        );
+      }
+      if (err?.code === 'auth/popup-closed-by-user') {
+        throw new Error('Sign-in was cancelled.');
+      }
+      if (err?.code === 'auth/popup-blocked') {
+        throw new Error('Sign-in popup was blocked by your browser. Please allow popups for this site.');
+      }
+
+      throw err;
     }
   }
 

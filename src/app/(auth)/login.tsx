@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { BorderRadius, Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
 import { useAuth } from '../../context/AuthContext';
@@ -22,9 +22,11 @@ export default function LoginScreen() {
       setLoading(true);
       await loginWithGoogle();
       router.replace('/(onboarding)/profile');
-    } catch (e) {
+    } catch (e: any) {
       console.error('Google login error:', e);
-      router.replace('/(onboarding)/profile');
+      if (e?.message && !e.message.includes('cancelled')) {
+        Alert.alert('Google Sign-In Notice', e.message);
+      }
     } finally {
       setLoading(false);
     }
