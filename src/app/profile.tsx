@@ -25,17 +25,17 @@ export default function ProfileScreen() {
   const router = useRouter();
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState(user?.displayName || 'Hadji');
-  const [editAge, setEditAge] = useState(String(user?.age || 28));
-  const [editWeight, setEditWeight] = useState(String(user?.weightKg || 76));
-  const [editTargetWeight, setEditTargetWeight] = useState(String(user?.targetWeightKg || 70));
+  const [editName, setEditName] = useState(user?.displayName || 'User');
+  const [editAge, setEditAge] = useState(String(user?.age || 25));
+  const [editWeight, setEditWeight] = useState(String(user?.weightKg || 70));
+  const [editTargetWeight, setEditTargetWeight] = useState(String(user?.targetWeightKg || 65));
 
   const handleSaveProfile = () => {
     updateProfile({
-      displayName: editName.trim() || 'Hadji',
-      age: Number(editAge) || 28,
-      weightKg: Number(editWeight) || 76,
-      targetWeightKg: Number(editTargetWeight) || 70,
+      displayName: editName.trim() || 'User',
+      age: Number(editAge) || 25,
+      weightKg: Number(editWeight) || 70,
+      targetWeightKg: Number(editTargetWeight) || 65,
     });
     setIsEditing(false);
     Alert.alert('Profile Updated', 'Your profile details have been updated successfully.');
@@ -63,13 +63,13 @@ export default function ProfileScreen() {
       {/* User Info Header Card */}
       <Card style={styles.profileCard} padding="lg">
         <View style={styles.profileRow}>
-          <Avatar uri={user?.avatarUrl} name={user?.displayName || 'Hadji'} size={72} />
+          <Avatar uri={user?.avatarUrl} name={user?.displayName || 'User'} size={72} />
           <View style={styles.nameCol}>
             <Text style={[Typography.h2, { color: colors.textPrimary }]}>
-              {user?.displayName || 'Hadji'}
+              {user?.displayName || 'User'}
             </Text>
             <Text style={[Typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-              {user?.email || 'hadji.developer@example.com'}
+              {user?.email || ''}
             </Text>
             <View style={[styles.googlePill, { backgroundColor: colors.surfaceSecondary }]}>
               <Ionicons name="logo-google" size={12} color={colors.textSecondary} />

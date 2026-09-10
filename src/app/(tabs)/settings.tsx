@@ -54,14 +54,14 @@ export default function SettingsScreen() {
         <SettingRow
           icon="person-circle-outline"
           title="Profile"
-          subtitle={user?.displayName || 'Hadji'}
+          subtitle={user?.displayName || 'Manage Profile'}
           onPress={() => router.push('/profile')}
         />
         <SettingRow
           icon="logo-google"
           title="Google Account"
-          subtitle={user?.email || 'hadji.developer@example.com'}
-          value="Connected"
+          subtitle={user?.email || 'Not connected'}
+          value={user?.email ? 'Connected' : 'Disconnected'}
         />
         <SettingRow
           icon="log-out-outline"

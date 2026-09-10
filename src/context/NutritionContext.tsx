@@ -39,21 +39,32 @@ interface NutritionContextType {
 
 const NutritionContext = createContext<NutritionContextType | undefined>(undefined);
 
+const getTodayLocalDate = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export function NutritionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [todayMeals, setTodayMeals] = useState<Meal[]>(initialTodayMeals);
-  const [selectedDate, setSelectedDate] = useState<string>('2026-09-10');
-  const [dayLogs, setDayLogs] = useState<DayLog[]>(mockDayLogs);
-  const [achievements, setAchievements] = useState<Achievement[]>(mockAchievements);
+  const [todayMeals, setTodayMeals] = useState<Meal[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayLocalDate());
+  const [dayLogs, setDayLogs] = useState<DayLog[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>(
+    mockAchievements.map((a) => ({ ...a, unlocked: false, unlockedDate: undefined }))
+  );
 
   // Subscribe to real-time meal updates from Firestore for authenticated user
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setTodayMeals([]);
+      return;
+    }
 
     const unsubscribe = MealService.subscribeToMeals(user.id, (meals) => {
-      if (meals && meals.length > 0) {
-        setTodayMeals(meals);
-      }
+      setTodayMeals(meals || []);
     });
 
     return () => unsubscribe();

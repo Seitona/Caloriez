@@ -74,11 +74,11 @@ export default function HomeDashboardScreen() {
             onPress={() => router.push('/profile')}
             style={styles.avatarTouchable}
           >
-            <Avatar uri={user?.avatarUrl} name={user?.displayName || 'Hadji'} size={44} />
+            <Avatar uri={user?.avatarUrl} name={user?.displayName || 'User'} size={44} />
           </TouchableOpacity>
           <View style={styles.greetingCol}>
             <Text style={[Typography.h2, { color: colors.textPrimary }]}>
-              {greeting}, {user?.displayName || 'Hadji'}
+              {greeting}{user?.displayName ? `, ${user.displayName}` : ''}
             </Text>
             <Text style={[Typography.caption, { color: colors.textSecondary }]}>
               {dateFormatted}

@@ -19,12 +19,12 @@ export default function BasicProfileScreen() {
   const { user, updateProfile } = useAuth();
   const router = useRouter();
 
-  const [displayName, setDisplayName] = useState(user?.displayName || 'Hadji');
-  const [age, setAge] = useState(user?.age ? String(user.age) : '28');
+  const [displayName, setDisplayName] = useState(user?.displayName || '');
+  const [age, setAge] = useState(user?.age ? String(user.age) : '25');
   const [sex, setSex] = useState<Sex>(user?.sex || 'male');
   const [units, setUnits] = useState<MeasurementUnit>(user?.units || 'metric');
-  const [height, setHeight] = useState(user?.heightCm ? String(user.heightCm) : '175');
-  const [weight, setWeight] = useState(user?.weightKg ? String(user.weightKg) : '76');
+  const [height, setHeight] = useState(user?.heightCm ? String(user.heightCm) : '170');
+  const [weight, setWeight] = useState(user?.weightKg ? String(user.weightKg) : '70');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleContinue = () => {
